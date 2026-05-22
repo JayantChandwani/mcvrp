@@ -83,6 +83,67 @@ inline std::string csv_escape(const std::string& s) {
     return out;
 }
 
+inline std::ofstream open_csv_trunc(const std::filesystem::path& path, const std::string& header) {
+    if (path.has_parent_path()) {
+        std::filesystem::create_directories(path.parent_path());
+    }
+    std::ofstream out(path, std::ios::trunc);
+    if (out.is_open() && !header.empty()) {
+        out << header << "\n";
+    }
+    return out;
+}
+
+inline void reset_csv(const std::filesystem::path& path) {
+    if (std::filesystem::exists(path)) {
+        std::filesystem::remove(path);
+    }
+}
+
+inline std::ofstream open_dataset_csv(const std::filesystem::path& scenario_dir, const std::string& filename) {
+    return open_csv_trunc(
+        scenario_dir / filename,
+        "scenario,test_name,total_distance,runtime_ms,tours"
+    );
+}
+
+inline std::ofstream open_combined_csv(const std::filesystem::path& scenario_dir, const std::string& filename) {
+    return open_csv_trunc(
+        scenario_dir / filename,
+        "scenario,dataset,total_distance_sum,total_time_ms_sum"
+    );
+}
+
+inline void write_result_row(
+    std::ofstream& out,
+    const std::string& scenario,
+    const std::string& test_name,
+    int total_distance,
+    double runtime_ms,
+    const std::vector<std::vector<int>>& tours
+) {
+    if (!out.is_open()) return;
+    out << csv_escape(scenario) << ","
+        << csv_escape(test_name) << ","
+        << total_distance << ","
+        << runtime_ms << ","
+        << csv_escape(tours_to_string(tours)) << "\n";
+}
+
+inline void write_combined_row(
+    std::ofstream& out,
+    const std::string& scenario,
+    const std::string& dataset,
+    long long total_distance_sum,
+    double total_time_ms_sum
+) {
+    if (!out.is_open()) return;
+    out << scenario << ","
+        << dataset << ","
+        << total_distance_sum << ","
+        << total_time_ms_sum << "\n";
+}
+
 inline void append_result_csv(
     const std::string& csv_path,
     const std::string& scenario,

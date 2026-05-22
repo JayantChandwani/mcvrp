@@ -49,18 +49,14 @@ int main(int argc, char** argv) {
 
     const auto datasets = parser::parse_datasets_txt_raw(test_file);
 
-    const std::filesystem::path output_root = "../output";
+    const std::filesystem::path output_root = "../output/cluster_first";
     const std::filesystem::path scenario_dir = output_root / "scenario3";
     std::filesystem::create_directories(scenario_dir);
 
-    const std::filesystem::path combined_csv = scenario_dir / "sc_3_combined.csv";
-    std::ofstream combined_out(combined_csv, std::ios::trunc);
-    combined_out << "scenario,dataset,total_distance_sum,total_time_ms_sum\n";
+    std::ofstream combined_out = utils::open_combined_csv(scenario_dir, "sc_3_combined.csv");
 
     const std::filesystem::path final_csv = output_root / "final_output.csv";
-    if (std::filesystem::exists(final_csv)) {
-        std::filesystem::remove(final_csv);
-    }
+    utils::reset_csv(final_csv);
 
     std::vector<types::TestResult> results;
 
@@ -71,9 +67,10 @@ int main(int argc, char** argv) {
 
         const auto clusters = parser::build_cluster_graphs(dataset, false);
 
-        const std::filesystem::path ds_csv = scenario_dir / ("sc_3_ds_" + std::to_string(dataset.index) + ".csv");
-        std::ofstream ds_out(ds_csv, std::ios::trunc);
-        ds_out << "scenario,test_name,total_distance,runtime_ms,tours\n";
+        std::ofstream ds_out = utils::open_dataset_csv(
+            scenario_dir,
+            "sc_3_ds_" + std::to_string(dataset.index) + ".csv"
+        );
 
         long long dataset_total = 0;
         double dataset_time = 0.0;
@@ -156,14 +153,17 @@ int main(int argc, char** argv) {
         std::cout << dataset_name << "/" << cluster_name << " tours:\n";
         utils::print_tours(tours);
 
-        ds_out << utils::csv_escape("scenario3") << ","
-               << utils::csv_escape(cluster_name) << ","
-               << static_cast<int>(final_total) << ","
-               << tr.runtime_ms << ","
-               << utils::csv_escape(utils::tours_to_string(tours)) << "\n";
+        utils::write_result_row(
+            ds_out,
+            "scenario3",
+            cluster_name,
+            static_cast<int>(final_total),
+            tr.runtime_ms,
+            tours
+        );
 
         utils::append_result_csv(
-            "../output/final_output.csv",
+            final_csv.string(),
             "scenario3",
             dataset_name + "/" + cluster_name,
             static_cast<int>(final_total),
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
         dataset_time += tr.runtime_ms;
         }
 
-        combined_out << "scenario3," << dataset_name << "," << dataset_total << "," << dataset_time << "\n";
+        utils::write_combined_row(combined_out, "scenario3", dataset_name, dataset_total, dataset_time);
     }
 
     utils::print_results(results);
