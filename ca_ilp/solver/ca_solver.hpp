@@ -16,6 +16,7 @@ BidResult generate_bids_matrix(
 std::map<int, BestBid> find_best_bids(
     const std::vector<std::vector<double>>& bid_matrix,
     const std::vector<std::vector<int>>& subsets,
+    const std::vector<std::vector<int>>& subset_orders,
     const std::vector<int>& feasible
 );
 

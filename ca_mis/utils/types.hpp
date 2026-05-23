@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-namespace mcvrp::ca {
+namespace mcvrp::ca_mis {
 
 struct Dataset {
     std::vector<std::pair<double, double>> vehicle_coords;
@@ -19,22 +19,6 @@ struct BestBid {
     std::vector<int> order;
 };
 
-struct SolutionResult {
-    std::vector<BestBid> selected;
-    double total_cost = 0.0;
-    std::string status;
-};
-
-struct DatasetResult {
-    int id = 0;
-    std::string status;
-    double cost = 0.0;
-    double time_sec = 0.0;
-    int feasible_subsets = 0;
-    int total_subsets = 0;
-    std::vector<BestBid> selected;
-};
-
 struct SubsetTSP {
     bool feasible = false;
     double internal = 0.0;
@@ -43,11 +27,26 @@ struct SubsetTSP {
     std::vector<int> order;
 };
 
-struct BidResult {
-    std::vector<std::vector<double>> bid_matrix;
-    std::vector<std::vector<int>> subsets;
-    std::vector<int> feasible_subsets;
-    std::vector<std::vector<int>> subset_orders;
+struct CandidateBids {
+    std::vector<BestBid> bids;
+    int feasible_subsets = 0;
+    int total_subsets = 0;
 };
 
-} // namespace mcvrp::ca
+struct MISResult {
+    std::vector<BestBid> selected;
+    double total_cost = 0.0;
+    std::string status;
+};
+
+struct DatasetResult {
+    int id = 0;
+    double cost = 0.0;
+    double time_sec = 0.0;
+    std::string status;
+    int feasible_subsets = 0;
+    int total_subsets = 0;
+    std::vector<BestBid> selected;
+};
+
+} // namespace mcvrp::ca_mis

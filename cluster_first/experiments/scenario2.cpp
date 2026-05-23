@@ -186,14 +186,29 @@ std::vector<int> build_greedy_cluster_order(
 int main(int argc, char** argv) {
     using namespace mcvrp;
 
-    if (argc != 2) {
-        std::cerr << "Usage: scenario2 [datasets.txt]\n";
+    bool debug = false;
+    std::string test_file;
+
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--debug") {
+            debug = true;
+        } else if (test_file.empty()) {
+            test_file = arg;
+        } else {
+            std::cerr << "Usage: scenario2 [datasets.txt] [--debug]\n";
+            return 1;
+        }
+    }
+
+    if (test_file.empty()) {
+        std::cerr << "Usage: scenario2 [datasets.txt] [--debug]\n";
         return 1;
     }
 
-    std::cout << "=== Scenario 2: wi <= C/2 and no limits on K ===\n\n";
-
-    const std::string test_file = argv[1];
+    if (debug) {
+        std::cout << "=== Scenario 2: wi <= C/2 and no limits on K ===\n\n";
+    }
     if (!std::filesystem::exists(test_file) || !std::filesystem::is_regular_file(test_file) || test_file.size() < 4 || test_file.substr(test_file.size() - 4) != ".txt") {
         std::cerr << "Input must be a .txt datasets file: " << test_file << "\n";
         return 1;
@@ -463,8 +478,10 @@ int main(int argc, char** argv) {
             tours.push_back(std::move(t));
         }
 
-        std::cout << dataset_name << "/" << cluster_name << " tours:\n";
-        utils::print_tours(tours);
+        if (debug) {
+            std::cout << dataset_name << "/" << cluster_name << " tours:\n";
+            utils::print_tours(tours);
+        }
 
         utils::write_result_row(
             ds_out,
@@ -491,7 +508,9 @@ int main(int argc, char** argv) {
         utils::write_combined_row(combined_out, "scenario2", dataset_name, dataset_total, dataset_time);
     }
 
-    utils::print_results(results);
+    if (debug) {
+        utils::print_results(results);
+    }
     return 0;
 }
 

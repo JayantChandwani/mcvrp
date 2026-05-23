@@ -1,5 +1,5 @@
 #include "parser/cvrp_parser.hpp"
-#include "solver/ca_solver.hpp"
+#include "solver/ca_mis_solver.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -49,7 +49,7 @@ struct ScenarioDefaults {
     int capacity = 100;
 };
 
-ScenarioDefaults scenario_defaults(const std::string& scenario, const mcvrp::ca::Dataset& dataset) {
+ScenarioDefaults scenario_defaults(const std::string& scenario, const mcvrp::ca_mis::Dataset& dataset) {
     int max_w = 0;
     for (int w : dataset.weights) max_w = std::max(max_w, w);
     if (scenario == "scenario1") {
@@ -142,6 +142,7 @@ void append_result_csv(
 
 int main(int argc, char** argv) {
     std::signal(SIGINT, handle_sigint);
+
     std::string input = "../datasets.txt";
     std::string datasets_raw = "1-100";
     std::string scenario;
@@ -151,6 +152,7 @@ int main(int argc, char** argv) {
     int workers = 0;
     int neighbor_limit = 12;
     int max_candidates = 250000;
+    int restarts = 8;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -170,13 +172,13 @@ int main(int argc, char** argv) {
         else if (arg == "--workers") workers = std::stoi(next(arg));
         else if (arg == "--neighbor-limit") neighbor_limit = std::stoi(next(arg));
         else if (arg == "--max-candidates") max_candidates = std::stoi(next(arg));
+        else if (arg == "--restarts") restarts = std::stoi(next(arg));
         else if (arg == "--debug") debug = true;
-        else if (arg == "--output-csv") next(arg);
         else if (arg == "--help" || arg == "-h") {
-            std::cout << "Usage: ca_ilp_main [--input PATH] [--datasets 1-100] \\n"
+            std::cout << "Usage: ca_mis_main [--input PATH] [--datasets 1-100] \\n"
                          "  --scenario scenario1|scenario2|scenario3 \\n"
                          "  [--max-subset N] [--capacity N] [--workers N] \\n"
-                         "  [--neighbor-limit N] [--max-candidates N] [--debug]\n";
+                         "  [--neighbor-limit N] [--max-candidates N] [--restarts N] [--debug]\n";
             return 0;
         }
     }
@@ -186,7 +188,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    auto datasets = mcvrp::ca::parser::parse_cvrp_data(input);
+    auto datasets = mcvrp::ca_mis::parser::parse_cvrp_data(input);
     std::vector<int> ids = parse_dataset_selection(datasets_raw);
     ids.erase(std::remove_if(ids.begin(), ids.end(), [&](int id) { return !datasets.count(id); }), ids.end());
     if (ids.empty()) {
@@ -204,7 +206,7 @@ int main(int argc, char** argv) {
         std::cout << "Loaded " << datasets.size() << " datasets | CPUs: " << ncpus << "\n\n";
     }
 
-    std::vector<mcvrp::ca::DatasetResult> results(ids.size());
+    std::vector<mcvrp::ca_mis::DatasetResult> results(ids.size());
     const auto wall_start = std::chrono::high_resolution_clock::now();
 
     #pragma omp parallel for schedule(dynamic)
@@ -216,13 +218,14 @@ int main(int argc, char** argv) {
         auto defaults = scenario_defaults(scenario, datasets[id]);
         const int max_subset = (max_subset_override > 0) ? max_subset_override : defaults.max_subset;
         const int capacity = (capacity_override > 0) ? capacity_override : defaults.capacity;
-        results[i] = mcvrp::ca::solver::process_dataset(
+        results[i] = mcvrp::ca_mis::solver::process_dataset(
             id,
             datasets[id],
             max_subset,
             capacity,
             neighbor_limit,
-            max_candidates
+            max_candidates,
+            restarts
         );
     }
 
@@ -277,7 +280,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    const std::filesystem::path output_root = "../output/ca_ilp";
+    const std::filesystem::path output_root = "../output/ca_mis";
     const std::filesystem::path scenario_dir = output_root / scenario;
     std::filesystem::create_directories(scenario_dir);
 
@@ -309,9 +312,10 @@ int main(int argc, char** argv) {
         const double route_time_ms = route_count ? (dataset_time_ms / route_count) : 0.0;
 
         double dataset_total = 0.0;
+        const int depot_count = static_cast<int>(datasets[r.id].vehicle_coords.size());
+
         for (std::size_t i = 0; i < r.selected.size(); ++i) {
             const auto& bid = r.selected[i];
-            const int depot_count = static_cast<int>(datasets[r.id].vehicle_coords.size());
 
             std::vector<int> tour;
             tour.reserve(bid.order.size() + 1);

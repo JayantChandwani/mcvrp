@@ -60,4 +60,20 @@ add_executable(ca_ilp_main ${CMAKE_SOURCE_DIR}/ca_ilp/main.cpp)
 target_link_libraries(ca_ilp_main PRIVATE ca_ilp_core)
 set_target_properties(ca_ilp_main PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ca_ilp)
 
+# Build ca_mis (combinatorial auction with MIS heuristic)
+file(GLOB_RECURSE CA_MIS_CORE_SRCS
+    ${CMAKE_SOURCE_DIR}/ca_mis/*.cpp
+)
+list(FILTER CA_MIS_CORE_SRCS EXCLUDE REGEX ".*/(main|cvrp_ca_mis_fixed)\\.cpp$")
+
+add_library(ca_mis_core ${CA_MIS_CORE_SRCS})
+target_include_directories(ca_mis_core PUBLIC ${CMAKE_SOURCE_DIR}/ca_mis)
+if (OpenMP_CXX_FOUND)
+    target_link_libraries(ca_mis_core PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
+add_executable(ca_mis_main ${CMAKE_SOURCE_DIR}/ca_mis/main.cpp)
+target_link_libraries(ca_mis_main PRIVATE ca_mis_core)
+set_target_properties(ca_mis_main PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ca_mis)
+
 

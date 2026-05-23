@@ -44,6 +44,12 @@ BidResult generate_bids_matrix(
 
     const int f_count = static_cast<int>(feasible.size());
     std::vector<std::vector<double>> bid_matrix(v, std::vector<double>(s_count, std::numeric_limits<double>::infinity()));
+    std::vector<std::vector<int>> subset_orders(s_count);
+    for (int s = 0; s < s_count; ++s) {
+        if (tsp_cache[s].feasible) {
+            subset_orders[s] = tsp_cache[s].order;
+        }
+    }
 
     #pragma omp parallel for schedule(static)
     for (int d = 0; d < v; ++d) {
@@ -56,12 +62,13 @@ BidResult generate_bids_matrix(
         }
     }
 
-    return {bid_matrix, subsets, feasible};
+    return {bid_matrix, subsets, feasible, subset_orders};
 }
 
 std::map<int, BestBid> find_best_bids(
     const std::vector<std::vector<double>>& bid_matrix,
     const std::vector<std::vector<int>>& subsets,
+    const std::vector<std::vector<int>>& subset_orders,
     const std::vector<int>& feasible
 ) {
     std::map<int, BestBid> best;
@@ -77,7 +84,12 @@ std::map<int, BestBid> find_best_bids(
             }
         }
         if (best_value < std::numeric_limits<double>::infinity()) {
-            best[s] = {best_depot, best_value, subsets[s]};
+            BestBid bid;
+            bid.depot = best_depot;
+            bid.bid = best_value;
+            bid.subset = subsets[s];
+            bid.order = subset_orders[s].empty() ? subsets[s] : subset_orders[s];
+            best[s] = std::move(bid);
         }
     }
 
@@ -138,7 +150,7 @@ DatasetResult process_dataset(
 ) {
     const auto t0 = std::chrono::high_resolution_clock::now();
     auto bids = generate_bids_matrix(dataset, max_subset_size, capacity, neighbor_limit, max_candidates);
-    auto best = find_best_bids(bids.bid_matrix, bids.subsets, bids.feasible_subsets);
+    auto best = find_best_bids(bids.bid_matrix, bids.subsets, bids.subset_orders, bids.feasible_subsets);
     auto sol = solve_set_partitioning(best, static_cast<int>(dataset.target_coords.size()));
     const double elapsed = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - t0).count();
     DatasetResult result;
@@ -148,6 +160,7 @@ DatasetResult process_dataset(
     result.time_sec = elapsed;
     result.feasible_subsets = static_cast<int>(bids.feasible_subsets.size());
     result.total_subsets = static_cast<int>(bids.subsets.size());
+    result.selected = sol.selected;
     return result;
 }
 

@@ -7,7 +7,7 @@
 #include <set>
 #include <sstream>
 
-namespace mcvrp::ca::utils {
+namespace mcvrp::ca_mis::utils {
 
 std::string trim(const std::string& s) {
     const std::size_t a = s.find_first_not_of(" \t\r\n");
@@ -238,4 +238,4 @@ std::vector<SubsetTSP> precompute_tsp_cache(
     return cache;
 }
 
-} // namespace mcvrp::ca::utils
+} // namespace mcvrp::ca_mis::utils
