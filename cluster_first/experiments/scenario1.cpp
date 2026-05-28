@@ -29,6 +29,14 @@ int calculate_capacity(const mcvrp::types::GraphInput& input) {
     }
     return 2 * max_demand; 
 }
+
+struct OutputRow {
+    std::string test_name;
+    std::string cluster_name;
+    int total = 0;
+    double runtime_ms = 0.0;
+    std::vector<std::vector<int>> tours;
+};
 }
 
 int main(int argc, char** argv) {
@@ -76,15 +84,16 @@ int main(int argc, char** argv) {
         ds_name << "dataset_" << std::setw(3) << std::setfill('0') << dataset.index;
         const std::string dataset_name = ds_name.str();
 
-        const auto clusters = parser::build_cluster_graphs(dataset, false);
-
         std::ofstream ds_out = utils::open_dataset_csv(
             scenario_dir,
             "sc_1_ds_" + std::to_string(dataset.index) + ".csv"
         );
 
+        auto dataset_start = std::chrono::high_resolution_clock::now();
+        const auto clusters = parser::build_cluster_graphs(dataset, false);
+
         long long dataset_total = 0;
-        double dataset_time = 0.0;
+        std::vector<OutputRow> output_rows;
 
         for (const auto& cluster : clusters) {
             const std::string& cluster_name = cluster.first;
@@ -147,26 +156,32 @@ int main(int argc, char** argv) {
                 utils::print_tours(tours);
             }
 
+            output_rows.push_back({r.test_name, cluster_name, static_cast<int>(total), r.runtime_ms, tours});
+
+            dataset_total += static_cast<long long>(total);
+        }
+
+        const auto dataset_end = std::chrono::high_resolution_clock::now();
+        const double dataset_time = std::chrono::duration<double, std::milli>(dataset_end - dataset_start).count();
+
+        for (const auto& row : output_rows) {
             utils::write_result_row(
                 ds_out,
                 "scenario1",
-                cluster_name,
-                static_cast<int>(total),
-                r.runtime_ms,
-                tours
+                row.cluster_name,
+                row.total,
+                row.runtime_ms,
+                row.tours
             );
 
             utils::append_result_csv(
                 final_csv.string(),
                 "scenario1",
-                r.test_name,
-                static_cast<int>(total),
-                r.runtime_ms,
-                tours
+                row.test_name,
+                row.total,
+                row.runtime_ms,
+                row.tours
             );
-
-            dataset_total += static_cast<long long>(total);
-            dataset_time += r.runtime_ms;
         }
 
         utils::write_combined_row(combined_out, "scenario1", dataset_name, dataset_total, dataset_time);
