@@ -24,6 +24,10 @@ inline double to_display_distance(int scaled) {
     return static_cast<double>(scaled) / DISTANCE_SCALE;
 }
 
+inline double to_display_distance(long long scaled) {
+    return static_cast<double>(scaled) / DISTANCE_SCALE;
+}
+
 inline void print_results(const std::vector<types::TestResult>& results) {
     std::cout << "\n" << std::string(90, '=') << "\n";
     std::cout << "                           TEST RESULTS\n";
@@ -125,7 +129,7 @@ inline void write_result_row(
     if (!out.is_open()) return;
     out << csv_escape(scenario) << ","
         << csv_escape(test_name) << ","
-        << total_distance << ","
+        << std::fixed << std::setprecision(2) << to_display_distance(total_distance) << ","
         << runtime_ms << ","
         << csv_escape(tours_to_string(tours)) << "\n";
 }
@@ -140,7 +144,7 @@ inline void write_combined_row(
     if (!out.is_open()) return;
     out << scenario << ","
         << dataset << ","
-        << total_distance_sum << ","
+        << std::fixed << std::setprecision(2) << to_display_distance(total_distance_sum) << ","
         << total_time_ms_sum << "\n";
 }
 
@@ -167,7 +171,7 @@ inline void append_result_csv(
 
     out << csv_escape(scenario) << ","
         << csv_escape(test_name) << ","
-        << total_distance << ","
+        << std::fixed << std::setprecision(2) << to_display_distance(total_distance) << ","
         << runtime_ms << ","
         << csv_escape(tours_to_string(tours)) << "\n";
 }
