@@ -12,9 +12,9 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Compare cluster_first vs CA-ILP vs CA-MIS outputs and plot per-dataset distances."
     )
-    p.add_argument("--output-root", type=Path, default=repo_root / "output")
+    p.add_argument("--output-root", type=Path, default=repo_root / "build" / "output")
     p.add_argument("--datasets", type=str, default="1-100", help="Dataset ids, e.g. 1-100 or 1,2,10-20")
-    p.add_argument("--methods", type=str, default="cluster_first,ca_ilp,ca_mis",
+    p.add_argument("--methods", type=str, default="cluster_first,match_first,ca_ilp,ca_mis",
                    help="Comma-separated methods to compare")
     p.add_argument("--plot", type=Path, default=repo_root / "output" / "comparison" / "methods_comparison.png")
     return p.parse_args()
@@ -119,10 +119,10 @@ def main() -> int:
             rows.append((ds, [m[ds] for m in maps]))
 
         labels = [f"{m}/{sc}" for m in methods]
-        merged_csv = comparison_root / f"{sc}_comparison.csv"
+        merged_csv = comparison_root / f"{sc}_cost_comparison.csv"
         write_merged_csv(merged_csv, rows, labels)
 
-        plot_path = comparison_root / f"{sc}_comparison.png"
+        plot_path = comparison_root / f"{sc}_cost_comparison.png"
         if rows:
             make_plot(plot_path, rows, labels)
 
