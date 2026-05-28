@@ -212,6 +212,7 @@ int main(int argc, char** argv) {
         if (g_stop.load(std::memory_order_relaxed)) {
             continue;
         }
+        const auto dataset_start = std::chrono::high_resolution_clock::now();
         const int id = ids[i];
         auto defaults = scenario_defaults(scenario, datasets[id]);
         const int max_subset = (max_subset_override > 0) ? max_subset_override : defaults.max_subset;
@@ -224,6 +225,8 @@ int main(int argc, char** argv) {
             neighbor_limit,
             max_candidates
         );
+        results[i].time_sec = std::chrono::duration<double>(
+            std::chrono::high_resolution_clock::now() - dataset_start).count();
     }
 
     if (g_stop.load(std::memory_order_relaxed)) {
