@@ -104,6 +104,20 @@ def main() -> int:
     scenario_names = ["scenario1", "scenario2", "scenario3"]
     comparison_root = output_root / "comparison"
 
+    missing = [
+        str(output_root / method / sc / f"sc_{sc[-1]}_combined.csv")
+        for sc in scenario_names
+        for method in methods
+        if not (output_root / method / sc / f"sc_{sc[-1]}_combined.csv").exists()
+    ]
+    if missing:
+        raise SystemExit(
+            "Missing experiment output(s):\n  " + "\n  ".join(missing) +
+            "\nRun the experiments first (scripts/run_everything.sh). ca_ilp requires "
+            "OR-Tools — install it with scripts/install_deps.sh, or pass --methods to "
+            "compare only the methods you ran."
+        )
+
     for sc in scenario_names:
         maps = []
         for method in methods:

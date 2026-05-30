@@ -1,6 +1,12 @@
 # Custom
 output*
 DESIGN_DOCS.md
+GUIDELINES.md
+
+# Python virtual environments
+.venv/
+venv/
+__pycache__/
 
 # Prerequisites
 *.d

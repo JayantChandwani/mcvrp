@@ -13,10 +13,6 @@ struct Dataset {
 	std::vector<int> weights;
 };
 
-// Parses a datasets.txt file (multiple datasets) and returns a vector of
-// (name, GraphInput) pairs.
-std::vector<std::pair<std::string, mcvrp::types::GraphInput>> parse_datasets_txt(const std::string& filepath);
-
 // Strict parser that mirrors the original Python preprocessing logic.
 std::vector<Dataset> parse_datasets_txt_raw(const std::string& filepath);
 

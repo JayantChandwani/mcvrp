@@ -14,17 +14,25 @@ This repo contains several heuristics for multi-depot constrained vehicle routin
 Requirements:
 
 - CMake
-- a C++17 compiler
-- OpenMP
-- [LEMON](https://lemon.cs.elte.hu/trac/lemon) headers and library
+- a C++17 compiler with the standard threading library (`std::thread`)
+- [LEMON](https://lemon.cs.elte.hu/trac/lemon) headers and library (for `cluster_first` / `match_first`)
 - OR-Tools for `ca_ilp`
-- Python 3 with `matplotlib`
+- Python 3 (packages in `requirements.txt`)
 
-The current `CMakeLists.txt` expects LEMON at:
+LEMON has no system package, so build it from source into `$HOME/lemon`
+(the location `CMakeLists.txt` expects) with the helper script:
 
 ```bash
-$HOME/lemon/include
-$HOME/lemon/lib/libemon.a
+scripts/install_deps.sh
+```
+
+This builds LEMON into `$HOME/lemon` and downloads a prebuilt OR-Tools into
+`$HOME/or-tools` (both the locations `CMakeLists.txt` expects). On a platform
+without a matching OR-Tools binary, point it at a release archive from
+<https://github.com/google/or-tools/releases>:
+
+```bash
+ORTOOLS_URL=<archive-url> scripts/install_deps.sh
 ```
 
 Configure and build:
@@ -33,6 +41,19 @@ Configure and build:
 cmake -S . -B build
 cmake --build build -j
 ```
+
+## Run Everything
+
+To build, run every method/scenario, and generate the comparison CSVs and tour
+plots in one step (set up the Python venv below first, for the plots):
+
+```bash
+scripts/run_everything.sh
+```
+
+Outputs land under `build/output/`. Methods whose dependencies are missing
+(e.g. `ca_ilp` without OR-Tools) are skipped. The per-method commands below
+are still available if you want to run them individually.
 
 ## Run Methods
 
@@ -90,7 +111,16 @@ Important files:
 
 ## Python Scripts
 
-After the experiment outputs exist, run (from the repo root) to compare outputs and plot tours:
+Set up a virtual environment and install the dependencies (once):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+After the experiment outputs exist, run (from the repo root, with the venv active)
+to compare outputs and plot tours:
 
 ```bash
 python3 scripts/compare_costs.py
@@ -101,4 +131,4 @@ python3 scripts/plot_tours.py
 These defaults use `datasets.txt`, `build/output`, and all four methods.
 
 > [!NOTE]
-> The Python scripts currently skip missing method/scenario outputs rather than failing loudly. The normal workflow is to run all experiments first, then run the scripts. If you need different settings, refer to the script arguments directly.
+> `compare_costs.py` / `compare_times.py` fail loudly if a requested method's outputs are missing (so you don't get confusing empty CSVs) — run the experiments first, or pass `--methods` to compare only the methods you ran. `run_everything.sh` does this automatically, comparing only the methods that produced output.

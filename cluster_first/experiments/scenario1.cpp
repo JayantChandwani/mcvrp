@@ -1,7 +1,7 @@
-#include "../parser/json_parser.hpp"
 #include "../parser/datasets_parser.hpp"
 #include "../graph/graph.hpp"
 #include "../solver/solver.hpp"
+#include "../utils/cluster_first_helpers.hpp"
 #include "../utils/utils.hpp"
 #include "../utils/types.hpp"
 #include <unordered_set>
@@ -18,26 +18,6 @@
 #include <vector>
 
 namespace fs = std::filesystem;
-
-namespace {
-int calculate_capacity(const mcvrp::types::GraphInput& input) {
-    int max_demand = 0;
-    for (const auto& node : input.nodes) {
-        if (node.id != 0) {
-            max_demand = std::max(max_demand, node.demand);
-        }
-    }
-    return 2 * max_demand; 
-}
-
-struct OutputRow {
-    std::string test_name;
-    std::string cluster_name;
-    int total = 0;
-    double runtime_ms = 0.0;
-    std::vector<std::vector<int>> tours;
-};
-}
 
 int main(int argc, char** argv) {
     using namespace mcvrp;
@@ -93,12 +73,11 @@ int main(int argc, char** argv) {
         const auto clusters = parser::build_cluster_graphs(dataset, false);
 
         long long dataset_total = 0;
-        std::vector<OutputRow> output_rows;
+        std::vector<cluster_first::OutputRow> output_rows;
 
         for (const auto& cluster : clusters) {
             const std::string& cluster_name = cluster.first;
             auto input = cluster.second;
-            input.capacity = calculate_capacity(input);
             graph::Graph G(input);
 
             auto start = std::chrono::high_resolution_clock::now();

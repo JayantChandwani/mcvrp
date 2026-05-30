@@ -6,23 +6,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# LEMON's headers use APIs deprecated in C++17; silence the header-only noise.
+add_compile_options(-Wno-deprecated-declarations)
+
 set(LEMON_INCLUDE_DIR "$ENV{HOME}/lemon/include")
 set(LEMON_LIBRARY "$ENV{HOME}/lemon/lib/libemon.a")
-
-include(FetchContent)
-FetchContent_Declare(
-    json
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
-)
-FetchContent_MakeAvailable(json)
 
 if (EXISTS "$ENV{HOME}/or-tools/lib/cmake/ortools/ortoolsConfig.cmake")
     list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/or-tools")
 endif()
 
 find_package(ortools CONFIG QUIET)
-find_package(OpenMP)
+find_package(Threads REQUIRED)
 
 # Build cluster_first experiments (library + three scenario executables)
 file(GLOB_RECURSE CLUSTER_CORE_SRCS
@@ -33,7 +28,7 @@ list(FILTER CLUSTER_CORE_SRCS EXCLUDE REGEX ".*/experiments/.*")
 
 add_library(cluster_first_core ${CLUSTER_CORE_SRCS})
 target_include_directories(cluster_first_core PUBLIC ${CMAKE_SOURCE_DIR}/cluster_first ${LEMON_INCLUDE_DIR})
-target_link_libraries(cluster_first_core PUBLIC nlohmann_json::nlohmann_json ${LEMON_LIBRARY})
+target_link_libraries(cluster_first_core PUBLIC ${LEMON_LIBRARY})
 
 add_executable(cluster_first_scenario1 ${CMAKE_SOURCE_DIR}/cluster_first/experiments/scenario1.cpp)
 target_link_libraries(cluster_first_scenario1 PRIVATE cluster_first_core)
@@ -64,7 +59,7 @@ list(FILTER MATCH_CORE_SRCS EXCLUDE REGEX ".*/experiments/.*")
 
 add_library(match_first_core ${MATCH_CORE_SRCS})
 target_include_directories(match_first_core PUBLIC ${CMAKE_SOURCE_DIR}/match_first ${LEMON_INCLUDE_DIR})
-target_link_libraries(match_first_core PUBLIC nlohmann_json::nlohmann_json ${LEMON_LIBRARY})
+target_link_libraries(match_first_core PUBLIC ${LEMON_LIBRARY})
 
 add_executable(match_first_scenario1 ${CMAKE_SOURCE_DIR}/match_first/experiments/scenario1.cpp)
 target_link_libraries(match_first_scenario1 PRIVATE match_first_core)
@@ -96,10 +91,7 @@ if (ortools_FOUND)
 
     add_library(ca_ilp_core ${CA_ILP_CORE_SRCS})
     target_include_directories(ca_ilp_core PUBLIC ${CMAKE_SOURCE_DIR}/ca_ilp)
-    target_link_libraries(ca_ilp_core PUBLIC ortools::ortools)
-    if (OpenMP_CXX_FOUND)
-        target_link_libraries(ca_ilp_core PUBLIC OpenMP::OpenMP_CXX)
-    endif()
+    target_link_libraries(ca_ilp_core PUBLIC ortools::ortools Threads::Threads)
 
     add_executable(ca_ilp_main ${CMAKE_SOURCE_DIR}/ca_ilp/main.cpp)
     target_link_libraries(ca_ilp_main PRIVATE ca_ilp_core)
@@ -112,13 +104,11 @@ endif()
 file(GLOB_RECURSE CA_MIS_CORE_SRCS
     ${CMAKE_SOURCE_DIR}/ca_mis/*.cpp
 )
-list(FILTER CA_MIS_CORE_SRCS EXCLUDE REGEX ".*/(main|cvrp_ca_mis_fixed)\\.cpp$")
+list(FILTER CA_MIS_CORE_SRCS EXCLUDE REGEX ".*/main\\.cpp$")
 
 add_library(ca_mis_core ${CA_MIS_CORE_SRCS})
 target_include_directories(ca_mis_core PUBLIC ${CMAKE_SOURCE_DIR}/ca_mis)
-if (OpenMP_CXX_FOUND)
-    target_link_libraries(ca_mis_core PUBLIC OpenMP::OpenMP_CXX)
-endif()
+target_link_libraries(ca_mis_core PUBLIC Threads::Threads)
 
 add_executable(ca_mis_main ${CMAKE_SOURCE_DIR}/ca_mis/main.cpp)
 target_link_libraries(ca_mis_main PRIVATE ca_mis_core)

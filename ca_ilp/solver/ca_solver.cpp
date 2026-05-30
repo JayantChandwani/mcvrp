@@ -7,7 +7,6 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
-#include <omp.h>
 #include <unordered_map>
 
 namespace mcvrp::ca::solver {
@@ -51,7 +50,6 @@ BidResult generate_bids_matrix(
         }
     }
 
-    #pragma omp parallel for schedule(static)
     for (int d = 0; d < v; ++d) {
         for (int fi = 0; fi < f_count; ++fi) {
             const int s = feasible[fi];
