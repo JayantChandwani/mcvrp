@@ -24,21 +24,28 @@ int main(int argc, char** argv) {
 
     bool debug = false;
     std::string test_file;
+    int capacity_override = -1;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--debug") {
             debug = true;
+        } else if (arg == "--capacity") {
+            if (i + 1 >= argc) {
+                std::cerr << "Missing value for --capacity\n";
+                return 1;
+            }
+            capacity_override = std::stoi(argv[++i]);
         } else if (test_file.empty()) {
             test_file = arg;
         } else {
-            std::cerr << "Usage: scenario3 [datasets.txt] [--debug]\n";
+            std::cerr << "Usage: scenario3 [datasets.txt] [--capacity N] [--debug]\n";
             return 1;
         }
     }
 
     if (test_file.empty()) {
-        std::cerr << "Usage: scenario3 [datasets.txt] [--debug]\n";
+        std::cerr << "Usage: scenario3 [datasets.txt] [--capacity N] [--debug]\n";
         return 1;
     }
     if (!fs::exists(test_file) || !fs::is_regular_file(test_file) || test_file.size() < 4 || test_file.substr(test_file.size() - 4) != ".txt") {
@@ -76,7 +83,7 @@ int main(int argc, char** argv) {
         auto start = std::chrono::high_resolution_clock::now();
 
         auto graph_input = match_first::build_target_graph(dataset);
-        graph_input.capacity = match_first::scenario3_capacity(dataset);
+        graph_input.capacity = (capacity_override > 0) ? capacity_override : match_first::scenario3_capacity(dataset);
         const auto filtered = filters::apply_weight_constraint(graph_input);
 
         if (debug) {

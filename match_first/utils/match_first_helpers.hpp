@@ -26,6 +26,6 @@ long long route_distance(const Group& group, int depot_id, const parser::Dataset
 long long cluster_distance(const Group& ordered_cluster, const parser::Dataset& dataset, int depot_id);
 Group build_greedy_cluster_order(const Group& cluster, const parser::Dataset& dataset, int depot_id);
 
-std::vector<Group> build_scenario2_groups(const parser::Dataset& dataset, const types::GraphInput& input);
+std::vector<Group> build_scenario2_groups(const parser::Dataset& dataset, const types::GraphInput& input, int capacity_override = -1);
 
 } // namespace mcvrp::match_first

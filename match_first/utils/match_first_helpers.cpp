@@ -275,8 +275,8 @@ Group build_greedy_cluster_order(const Group& cluster, const Dataset& dataset, i
     return ordered;
 }
 
-std::vector<Group> build_scenario2_groups(const Dataset& dataset, const GraphInput& input) {
-    const int capacity = scenario2_capacity(dataset);
+std::vector<Group> build_scenario2_groups(const Dataset& dataset, const GraphInput& input, int capacity_override) {
+    const int capacity = (capacity_override > 0) ? capacity_override : scenario2_capacity(dataset);
 
     std::unordered_map<int, Node> original_by_id;
     original_by_id.reserve(input.nodes.size());

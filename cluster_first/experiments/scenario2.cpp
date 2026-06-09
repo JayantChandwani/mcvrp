@@ -22,21 +22,28 @@ int main(int argc, char** argv) {
 
     bool debug = false;
     std::string test_file;
+    int capacity_override = -1;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--debug") {
             debug = true;
+        } else if (arg == "--capacity") {
+            if (i + 1 >= argc) {
+                std::cerr << "Missing value for --capacity\n";
+                return 1;
+            }
+            capacity_override = std::stoi(argv[++i]);
         } else if (test_file.empty()) {
             test_file = arg;
         } else {
-            std::cerr << "Usage: scenario2 [datasets.txt] [--debug]\n";
+            std::cerr << "Usage: scenario2 [datasets.txt] [--capacity N] [--debug]\n";
             return 1;
         }
     }
 
     if (test_file.empty()) {
-        std::cerr << "Usage: scenario2 [datasets.txt] [--debug]\n";
+        std::cerr << "Usage: scenario2 [datasets.txt] [--capacity N] [--debug]\n";
         return 1;
     }
 
@@ -81,7 +88,9 @@ int main(int argc, char** argv) {
             const std::string& cluster_name = cluster.first;
             const auto& input = cluster.second;
 
-            const int capacity = (input.capacity > 0) ? input.capacity : cluster_first::scenario2_capacity(input);
+            const int capacity = (capacity_override > 0)
+                ? capacity_override
+                : (input.capacity > 0) ? input.capacity : cluster_first::scenario2_capacity(input);
 
             auto start = std::chrono::high_resolution_clock::now();
             const auto final_clusters = cluster_first::build_scenario2_clusters(input, capacity);
