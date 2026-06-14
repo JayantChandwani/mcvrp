@@ -1,0 +1,13 @@
+method,scenario,n_datasets,total_cost,mean_cost,total_time_ms,mean_time_ms,status
+cluster_first,scenario1,50,1630858.8800,32617.1776,3429.6500,68.5930,ok
+cluster_first,scenario2,50,1225432.8700,24508.6574,5676.8600,113.5372,ok
+cluster_first,scenario3,50,1660750.6600,33215.0132,4166.5400,83.3308,ok
+match_first,scenario1,50,1625628.1800,32512.5636,58596.9300,1171.9386,ok
+match_first,scenario2,50,1215057.4600,24301.1492,74455.7600,1489.1152,ok
+match_first,scenario3,50,1648937.8400,32978.7568,52792.3200,1055.8464,ok
+ca_ilp,scenario1,0,NA,NA,NA,NA,timeout
+ca_ilp,scenario2,0,NA,NA,NA,NA,timeout
+ca_ilp,scenario3,0,NA,NA,NA,NA,timeout
+ca_mis,scenario1,50,1656871.8117,33137.4362,1839446.1383,36788.9228,ok
+ca_mis,scenario2,0,NA,NA,NA,NA,timeout
+ca_mis,scenario3,50,1717975.1306,34359.5026,1553027.2101,31060.5442,ok
