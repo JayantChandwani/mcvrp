@@ -12,12 +12,18 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Compare runtime by dataset across methods and plot per-dataset timings."
     )
-    p.add_argument("--output-root", type=Path, default=repo_root / "build" / "output")
+    p.add_argument("--output-root", type=Path, default=None,
+                   help="Root holding <method>/<scenario> outputs (default: build/output)")
+    p.add_argument("--sample", action="store_true",
+                   help="Use the repo's sample_output/ as the root instead of build/output")
     p.add_argument("--datasets", type=str, default="1-100", help="Dataset ids, e.g. 1-100 or 1,2,10-20")
     p.add_argument("--methods", type=str, default="cluster_first,match_first,ca_ilp,ca_mis",
                    help="Comma-separated methods to compare")
     p.add_argument("--plot", type=Path, default=repo_root / "output" / "comparison" / "methods_time_comparison.png")
-    return p.parse_args()
+    args = p.parse_args()
+    if args.output_root is None:
+        args.output_root = repo_root / ("sample_output" if args.sample else "build/output")
+    return args
 
 
 def parse_dataset_selection(raw: str) -> List[int]:
@@ -74,18 +80,16 @@ def make_plot(plot_path: Path, rows: List[Tuple[int, List[float]]], labels: List
     if not rows:
         raise RuntimeError("No common datasets to plot.")
 
-    x = [r[0] for r in rows]
     fig, ax = plt.subplots(1, 1, figsize=(14, 7))
 
-    for idx, label in enumerate(labels):
-        y = [r[1][idx] for r in rows]
-        ax.plot(x, y, label=label, linewidth=1.6)
+    data = [[r[1][idx] for r in rows] for idx in range(len(labels))]
+    ax.boxplot(data, tick_labels=labels, showmeans=True)
 
-    ax.set_xlabel("Dataset number")
+    ax.set_xlabel("Method")
     ax.set_ylabel("Runtime (ms)")
-    ax.set_title("Dataset-wise runtime comparison")
-    ax.grid(True, alpha=0.3)
-    ax.legend(loc="best")
+    ax.set_title("Runtime distribution by method")
+    ax.grid(True, axis="y", alpha=0.3)
+    ax.tick_params(axis="x", rotation=30)
 
     plot_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
