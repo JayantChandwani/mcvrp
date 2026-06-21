@@ -10,8 +10,8 @@ datasets — mirroring the compare_* box plots. Methods that timed out have no C
 and are simply omitted (noted on the figure).
 
 Outputs (under results/scalability/plots/):
-  scenarioN_scalability_cost.png
-  scenarioN_scalability_time.png
+    scalability_cost.png
+    scalability_time.png
 """
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ import argparse
 import csv
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+from plot_style import colorize_boxplot, configure_matplotlib, method_label, scenario_label, title
 
 
 METHOD_ORDER = ["cluster_first", "match_first", "ca_ilp", "ca_mis"]
@@ -53,28 +55,39 @@ def read_series(path: Path) -> Tuple[List[float], List[float]]:
     return costs, times
 
 
-def make_box_plot(out_path: Path, labels: List[str], data: List[List[float]],
-                  ylabel: str, title: str, missing: List[str], log_y: bool) -> None:
-    import matplotlib.pyplot as plt
+def make_box_plot(ax, labels: List[str], color_keys: List[str], data: List[List[float]],
+                  title_text: str, log_y: bool) -> None:
+    boxplot = ax.boxplot(data, tick_labels=labels, showmeans=True, widths=0.6, patch_artist=True)
+    colorize_boxplot(boxplot, color_keys)
 
-    fig, ax = plt.subplots(1, 1, figsize=(11, 6.5))
-    ax.boxplot(data, tick_labels=labels, showmeans=True)
-
-    ax.set_xlabel("Method")
-    ax.set_ylabel(ylabel)
-    ax.set_title(title)
+    title(ax, title_text, pad=8)
     if log_y:
         ax.set_yscale("log")
-    ax.grid(True, axis="y", alpha=0.3, which="both")
     ax.tick_params(axis="x", rotation=20)
-    if missing:
-        ax.text(0.99, 0.01, "omitted (timeout/no data): " + ", ".join(missing),
-                transform=ax.transAxes, ha="right", va="bottom", fontsize=8, color="gray")
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=170)
-    plt.close(fig)
+
+def collect_series(results_root: Path, sc: str) -> Tuple[List[str], List[str], List[List[float]], List[List[float]], List[str]]:
+    labels: List[str] = []
+    color_keys: List[str] = []
+    cost_data: List[List[float]] = []
+    time_data: List[List[float]] = []
+    missing: List[str] = []
+
+    for method in METHOD_ORDER:
+        path = results_root / f"{method}_{sc}.csv"
+        if not path.exists():
+            missing.append(method)
+            continue
+        costs, times = read_series(path)
+        if not costs or not times:
+            missing.append(method)
+            continue
+        labels.append(method_label(method))
+        color_keys.append(method)
+        cost_data.append(costs)
+        time_data.append(times)
+
+    return labels, color_keys, cost_data, time_data, missing
 
 
 def main() -> int:
@@ -84,41 +97,48 @@ def main() -> int:
     except ImportError as exc:
         raise SystemExit("matplotlib is required. Install with: pip install matplotlib") from exc
 
+    configure_matplotlib()
+
+    import matplotlib.pyplot as plt
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
     written: List[str] = []
-    for sc in SCENARIOS:
-        labels: List[str] = []
-        cost_data: List[List[float]] = []
-        time_data: List[List[float]] = []
-        missing: List[str] = []
-        sc_num = sc[-1]
-        for method in METHOD_ORDER:
-            path = args.results_root / f"{method}_{sc}.csv"
-            if not path.exists():
-                missing.append(method)
-                continue
-            costs, times = read_series(path)
-            if not costs:
-                missing.append(method)
-                continue
-            labels.append(method)
-            cost_data.append(costs)
-            time_data.append(times)
 
+    fig, axes = plt.subplots(1, len(SCENARIOS), figsize=(18, 6.5))
+    axes = [axes] if len(SCENARIOS) == 1 else list(axes)
+    for ax, sc in zip(axes, SCENARIOS):
+        labels, color_keys, cost_data, _time_data, missing = collect_series(args.results_root, sc)
         if not labels:
-            print(f"{sc}: no data, skipping.")
+            ax.set_axis_off()
+            title(ax, scenario_label(sc), pad=8)
             continue
+        make_box_plot(ax, labels, color_keys, cost_data, scenario_label(sc), log_y=False)
+    fig.suptitle("Total Distance Distribution at Scale", fontsize=16, y=0.94, fontweight="semibold")
+    fig.supxlabel("Method", y=0.033)
+    fig.supylabel("Total Distance", x=0.01)
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    cost_path = args.out_dir / "scalability_cost.png"
+    fig.savefig(cost_path, dpi=170)
+    plt.close(fig)
+    written.append(str(cost_path))
 
-        cost_path = args.out_dir / f"{sc}_scalability_cost.png"
-        make_box_plot(cost_path, labels, cost_data, "Total distance",
-                      f"{sc}: cost distribution at scale (n={len(cost_data[0])} datasets)",
-                      missing, log_y=False)
-        written.append(str(cost_path))
-
-        time_path = args.out_dir / f"{sc}_scalability_time.png"
-        make_box_plot(time_path, labels, time_data, "Runtime (ms)",
-                      f"{sc}: runtime distribution at scale",
-                      missing, log_y=not args.linear_time)
-        written.append(str(time_path))
+    fig, axes = plt.subplots(1, len(SCENARIOS), figsize=(18, 6.5))
+    axes = [axes] if len(SCENARIOS) == 1 else list(axes)
+    for ax, sc in zip(axes, SCENARIOS):
+        labels, color_keys, _cost_data, time_data, missing = collect_series(args.results_root, sc)
+        if not labels:
+            ax.set_axis_off()
+            title(ax, scenario_label(sc), pad=8)
+            continue
+        make_box_plot(ax, labels, color_keys, time_data, scenario_label(sc), log_y=not args.linear_time)
+    fig.suptitle("Total Runtime Distribution at Scale", fontsize=16, y=0.94, fontweight="semibold")
+    fig.supxlabel("Method", y=0.033)
+    fig.supylabel("Total Runtime (ms)", x=0.01)
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    time_path = args.out_dir / "scalability_time.png"
+    fig.savefig(time_path, dpi=170)
+    plt.close(fig)
+    written.append(str(time_path))
 
     if not written:
         raise SystemExit("No scalability CSVs found — run scripts/run_scalability_test.sh first.")

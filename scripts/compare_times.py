@@ -6,6 +6,8 @@ import csv
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from plot_style import colorize_boxplot, configure_matplotlib, method_label, scenario_label, title
+
 
 def parse_args() -> argparse.Namespace:
     repo_root = Path(__file__).resolve().parent.parent
@@ -71,7 +73,7 @@ def write_merged_csv(path: Path, rows: List[Tuple[int, List[float]]], labels: Li
             w.writerow([ds, *[f"{v:.6f}" for v in vals]])
 
 
-def make_plot(plot_path: Path, rows: List[Tuple[int, List[float]]], labels: List[str]) -> None:
+def make_plot(plot_path: Path, rows: List[Tuple[int, List[float]]], labels: List[str], method_keys: List[str], title_text: str) -> None:
     try:
         import matplotlib.pyplot as plt
     except ImportError as exc:
@@ -83,12 +85,12 @@ def make_plot(plot_path: Path, rows: List[Tuple[int, List[float]]], labels: List
     fig, ax = plt.subplots(1, 1, figsize=(14, 7))
 
     data = [[r[1][idx] for r in rows] for idx in range(len(labels))]
-    ax.boxplot(data, tick_labels=labels, showmeans=True)
+    boxplot = ax.boxplot(data, tick_labels=labels, showmeans=True, widths=0.6, patch_artist=True)
+    colorize_boxplot(boxplot, method_keys)
 
     ax.set_xlabel("Method")
-    ax.set_ylabel("Runtime (ms)")
-    ax.set_title("Runtime distribution by method")
-    ax.grid(True, axis="y", alpha=0.3)
+    ax.set_ylabel("Total Runtime (ms)")
+    title(ax, title_text, pad=4)
     ax.tick_params(axis="x", rotation=30)
 
     plot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,6 +109,8 @@ def main() -> int:
     datasets = parse_dataset_selection(args.datasets)
     scenario_names = ["scenario1", "scenario2", "scenario3"]
     comparison_root = output_root / "comparison"
+
+    configure_matplotlib()
 
     missing = [
         str(output_root / method / sc / f"sc_{sc[-1]}_combined.csv")
@@ -136,13 +140,14 @@ def main() -> int:
         for ds in common:
             rows.append((ds, [m[ds] for m in maps]))
 
-        labels = [f"{m}/{sc}" for m in methods]
+        labels = [method_label(m) for m in methods]
         merged_csv = comparison_root / f"{sc}_time_comparison.csv"
         write_merged_csv(merged_csv, rows, labels)
 
         plot_path = comparison_root / f"{sc}_time_comparison.png"
         if rows:
-            make_plot(plot_path, rows, labels)
+            title_text = f"{scenario_label(sc)}: Total Runtime Distribution"
+            make_plot(plot_path, rows, labels, methods, title_text)
 
     print(f"Wrote time comparison outputs to: {comparison_root}")
     return 0

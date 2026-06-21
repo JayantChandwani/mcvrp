@@ -16,8 +16,8 @@ capacity_valid flag is computed by run_capacity_tests.sh from the real max deman
 Older summaries without the column are treated as all-valid (no filtering).
 
 Outputs (under results/capacity/plots/):
-  scenarioN_capacity_cost.png
-  scenarioN_capacity_time.png
+    capacity_cost.png
+    capacity_time.png
 """
 from __future__ import annotations
 
@@ -25,6 +25,11 @@ import argparse
 import csv
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+from plot_style import color_for_method, configure_matplotlib, method_label, scenario_label, title
+
+
+SCENARIOS = ["scenario1", "scenario2", "scenario3"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -68,29 +73,53 @@ def read_summary(path: Path) -> Dict[str, Dict[str, List[Tuple[float, float, flo
     return data
 
 
-def make_line_plot(out_path: Path, series: Dict[str, List[Tuple]], value_idx: int,
-                   ylabel: str, title: str, log_y: bool) -> None:
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(1, 1, figsize=(11, 6.5))
+def make_line_plot(ax, series: Dict[str, List[Tuple]], value_idx: int,
+                   ylabel: str, title_text: str, log_y: bool) -> None:
     for method in sorted(series):
         pts = series[method]
         x = [p[0] for p in pts]
         y = [p[value_idx] for p in pts]
-        ax.plot(x, y, marker="o", linewidth=1.8, label=method)
+        ax.plot(x, y, marker="o", linewidth=2.0, color=color_for_method(method), label=method_label(method))
 
-    ax.set_xlabel("Capacity")
-    ax.set_ylabel(ylabel)
-    ax.set_title(title)
+    title(ax, title_text, pad=4)
     if log_y:
         ax.set_yscale("log")
-    ax.grid(True, alpha=0.3, which="both")
-    ax.legend(loc="best")
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=170)
-    plt.close(fig)
+
+def add_figure_legend(fig, axes) -> None:
+    method_order = ["cluster_first", "match_first", "ca_ilp", "ca_mis"]
+    handles = []
+    labels = []
+    seen = set()
+    for ax in axes:
+        handle_list, label_list = ax.get_legend_handles_labels()
+        for handle, label in zip(handle_list, label_list):
+            if label in seen:
+                continue
+            seen.add(label)
+            handles.append(handle)
+            labels.append(label)
+
+    ordered_handles = []
+    ordered_labels = []
+    for method in method_order:
+        display_label = method_label(method)
+        if display_label in seen:
+            index = labels.index(display_label)
+            ordered_handles.append(handles[index])
+            ordered_labels.append(display_label)
+
+    if ordered_handles:
+        fig.legend(
+            ordered_handles,
+            ordered_labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, 0.905),
+            ncol=len(ordered_labels),
+            frameon=False,
+            handlelength=2.8,
+            columnspacing=1.4,
+        )
 
 
 def main() -> int:
@@ -100,27 +129,58 @@ def main() -> int:
     except ImportError as exc:
         raise SystemExit("matplotlib is required. Install with: pip install matplotlib") from exc
 
+    configure_matplotlib()
+
     data = read_summary(args.results_root / "summary.csv")
     if not data:
         raise SystemExit("No ok rows in summary.csv — nothing to plot.")
 
     # entry tuple layout: (capacity, mean_cost, total_cost, total_time_ms)
     cost_idx = 1 if args.cost_metric == "mean_cost" else 2
-    cost_label = "Mean cost per dataset" if args.cost_metric == "mean_cost" else "Total cost"
+    cost_label = "Mean Cost per Dataset" if args.cost_metric == "mean_cost" else "Total Cost"
 
+    import matplotlib.pyplot as plt
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
     written: List[str] = []
-    for sc in sorted(data):
-        series = data[sc]
 
-        cost_path = args.out_dir / f"{sc}_capacity_cost.png"
-        make_line_plot(cost_path, series, cost_idx, cost_label,
-                       f"{sc}: cost vs capacity", log_y=False)
-        written.append(str(cost_path))
+    fig, axes = plt.subplots(1, len(SCENARIOS), figsize=(18, 6.5))
+    axes = [axes] if len(SCENARIOS) == 1 else list(axes)
+    for ax, sc in zip(axes, SCENARIOS):
+        series = data.get(sc, {})
+        if series:
+            make_line_plot(ax, series, cost_idx, cost_label, scenario_label(sc), log_y=False)
+        else:
+            ax.set_axis_off()
+            title(ax, scenario_label(sc), pad=8)
+        fig.suptitle(f"{cost_label} vs Capacity", fontsize=16, y=0.94, fontweight="semibold")
+    add_figure_legend(fig, axes)
+    fig.supxlabel("Capacity", y=0.033)
+    fig.supylabel(cost_label, x=0.01)
+    fig.tight_layout(rect=(0, 0, 1, 0.915))
+    cost_path = args.out_dir / "capacity_cost.png"
+    fig.savefig(cost_path, dpi=170)
+    plt.close(fig)
+    written.append(str(cost_path))
 
-        time_path = args.out_dir / f"{sc}_capacity_time.png"
-        make_line_plot(time_path, series, 3, "Total runtime (ms)",
-                       f"{sc}: runtime vs capacity", log_y=not args.linear_time)
-        written.append(str(time_path))
+    fig, axes = plt.subplots(1, len(SCENARIOS), figsize=(18, 6.5))
+    axes = [axes] if len(SCENARIOS) == 1 else list(axes)
+    for ax, sc in zip(axes, SCENARIOS):
+        series = data.get(sc, {})
+        if series:
+            make_line_plot(ax, series, 3, "Total Runtime (ms)", scenario_label(sc), log_y=not args.linear_time)
+        else:
+            ax.set_axis_off()
+            title(ax, scenario_label(sc), pad=8)
+        fig.suptitle("Total Runtime vs Capacity", fontsize=16, y=0.94, fontweight="semibold")
+    add_figure_legend(fig, axes)
+    fig.supxlabel("Capacity", y=0.033)
+    fig.supylabel("Total Runtime (ms)", x=0.01)
+    fig.tight_layout(rect=(0, 0, 1, 0.915))
+    time_path = args.out_dir / "capacity_time.png"
+    fig.savefig(time_path, dpi=170)
+    plt.close(fig)
+    written.append(str(time_path))
 
     print("Wrote capacity plots:\n  " + "\n  ".join(written))
     return 0
