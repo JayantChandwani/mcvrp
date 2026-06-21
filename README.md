@@ -128,7 +128,15 @@ python3 scripts/compare_times.py
 python3 scripts/plot_tours.py
 ```
 
-These defaults use `datasets.txt`, `build/output`, and all four methods.
+For the higher-level summary plots, use:
+
+```bash
+python3 scripts/plot_base.py
+python3 scripts/plot_capacity.py
+python3 scripts/plot_scalability.py
+```
+
+These defaults use `datasets.txt`, `build/output`, and the available methods.
 
 > [!NOTE]
-> `compare_costs.py` / `compare_times.py` fail loudly if a requested method's outputs are missing (so you don't get confusing empty CSVs) — run the experiments first, or pass `--methods` to compare only the methods you ran. `run_everything.sh` does this automatically, comparing only the methods that produced output.
+> `compare_times.py` only compares the native C++ methods by default. `compare_costs.py` writes both dataset-wise plots and boxplots. `run_everything.sh` handles the filtering automatically, comparing only the methods that produced output.
