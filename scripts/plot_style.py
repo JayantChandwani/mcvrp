@@ -23,6 +23,13 @@ METHOD_COLORS = {
     "ca_mis": "#C44E52",
 }
 
+METHOD_MARKERS = {
+    "cluster_first": "o",
+    "match_first": "s",
+    "ca_ilp": "^",
+    "ca_mis": "D",
+}
+
 
 def configure_matplotlib() -> None:
     import matplotlib as mpl
@@ -53,6 +60,10 @@ def scenario_label(scenario: str) -> str:
 
 def color_for_method(method: str) -> str:
     return METHOD_COLORS.get(method, "#666666")
+
+
+def marker_for_method(method: str) -> str:
+    return METHOD_MARKERS.get(method, "o")
 
 
 def title(ax, text: str, pad: int = 4) -> None:

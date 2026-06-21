@@ -26,7 +26,7 @@ import csv
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from plot_style import color_for_method, configure_matplotlib, method_label, scenario_label, title
+from plot_style import color_for_method, configure_matplotlib, marker_for_method, method_label, scenario_label, title
 
 
 SCENARIOS = ["scenario1", "scenario2", "scenario3"]
@@ -79,7 +79,18 @@ def make_line_plot(ax, series: Dict[str, List[Tuple]], value_idx: int,
         pts = series[method]
         x = [p[0] for p in pts]
         y = [p[value_idx] for p in pts]
-        ax.plot(x, y, marker="o", linewidth=2.0, color=color_for_method(method), label=method_label(method))
+        ax.plot(
+            x,
+            y,
+            marker=marker_for_method(method),
+            linewidth=2.0,
+            color=color_for_method(method),
+            label=method_label(method),
+            markersize=6,
+            markerfacecolor=color_for_method(method),
+            markeredgecolor="#111111",
+            markeredgewidth=0.8,
+        )
 
     title(ax, title_text, pad=4)
     if log_y:
